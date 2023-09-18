@@ -8,6 +8,8 @@ Les clients `Vue` (`vue-client` et `vue-admin`) contactent ou sont contactés (S
 
 ## Installation
 
+{{{{{ Docker à lancer sur une VM Linux ou modifier le code car "erreur npm: @esbuild/darwin-arm64 au lieu de @esbuild/linux-arm64" }}}}}
+
 Après avoir cloné le repo, faire cette commande à la racine du repo : `npm i && npm run inst`
 
 -   Ensuite faire `docker compose up --build` (si on a docker compose v2, sinon il faudra l'installer).
