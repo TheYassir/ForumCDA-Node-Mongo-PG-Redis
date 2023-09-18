@@ -1,0 +1,28 @@
+@startuml
+
+node client
+node admin
+database PostgreSQL
+folder MongoDB
+database REDIS
+node LoggingService
+
+
+admin <-up-> PostgreSQL
+admin <-up-> MongoDB
+admin <-up-> REDIS
+admin <-up- LoggingService
+
+PostgreSQL -> LoggingService
+MongoDB -> LoggingService
+REDIS -> LoggingService
+
+client --> PostgreSQL
+PostgreSQL -> MongoDB
+MongoDB -> REDIS
+
+client <-- MongoDB
+client <-- REDIS
+
+
+@enduml

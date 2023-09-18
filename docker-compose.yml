@@ -1,0 +1,186 @@
+networks:
+    nodejs:
+        driver: bridge
+services:
+    npm:
+        image: node:current-alpine3.16
+        volumes:
+            - ./:/var/www/html
+        working_dir: /var/www/html
+        networks:
+            - nodejs
+
+    pgsql:
+        image: postgres:14.3-alpine3.16
+        environment:
+            POSTGRES_PASSWORD: secret
+            POSTGRES_USER: student
+        volumes:
+            - ./pgsql:/var/lib/postgresql/data
+            - ./docker-conf/postgresql/schema.sql:/docker-entrypoint-initdb.d/create_tables.sql
+        networks:
+            - nodejs
+
+    mongo:
+        image: mongo:4.2.22
+        volumes:
+            - ./mongoData:/data/db
+            - ./docker-conf/mongo/createUser.js:/docker-entrypoint-initdb.d/createUser.js
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: example
+            MONGO_INITDB_DATABASE: forum
+        networks:
+            - nodejs
+
+    mongo-gui:
+        image: mongo-express
+        ports:
+            - '8081:8081'
+        expose:
+            - '8081'
+        environment:
+            ME_CONFIG_MONGODB_ADMINUSERNAME: root
+            ME_CONFIG_MONGODB_ADMINPASSWORD: example
+            ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+        networks:
+            - nodejs
+        depends_on:
+            - mongo
+            - postgres
+
+    mongo-express:
+        image: node:current-alpine3.16
+        volumes:
+            - ./mongo:/var/www/html/mongo
+        ports:
+            - '9000:9000'
+        expose:
+            - '9000'
+        environment:
+            PORT: 9000
+            BASE_URL: http://localhost
+            MONGO_URL: mongodb://student:secret@mongo:27017/forum
+            REDIS_URL: http://redis:5050
+        working_dir: /var/www/html/mongo
+        entrypoint: ['npm', 'run', 'dev', '--host', '0.0.0.0']
+        networks:
+            - nodejs
+        depends_on:
+            - mongo
+            - postgres
+
+    vue-client:
+        image: node:current-alpine3.16
+        ports:
+            - '5173:5173'
+        expose:
+            - '5173'
+        stdin_open: true
+        volumes:
+            - ./vue-client:/var/www/html/vue-client
+        networks:
+            - nodejs
+        entrypoint: ['npm', 'run', 'dev', '--host', '0.0.0.0']
+        working_dir: /var/www/html/vue-client
+        depends_on:
+            - mongo
+
+    vue-admin:
+        image: node:current-alpine3.16
+        ports:
+            - '5174:5174'
+        expose:
+            - '5174'
+        stdin_open: true
+        volumes:
+            - ./vue-admin:/var/www/html/vue-admin
+        networks:
+            - nodejs
+        entrypoint: ['npm', 'run', 'dev', '--host', '0.0.0.0']
+        working_dir: /var/www/html/vue-admin
+        depends_on:
+            - mongo
+
+    logging:
+        image: node:current-alpine3.16
+        volumes:
+            - ./logging:/var/www/html/logging
+        networks:
+            - nodejs
+        ports:
+            - '9050:9050'
+        expose:
+            - '9050'
+        environment:
+            BASE_URL: http://localhost
+            PORT: 9050
+            PG_URL: http://postgres:5000/api
+            MONGO_URL: http://mongo-express:9000
+            REDIS_URL: http://redis:5050
+        working_dir: /var/www/html/logging
+        entrypoint: ['npm', 'run', 'dev', '--host', '0.0.0.0']
+        depends_on:
+            - postgres
+
+    postgres:
+        image: node:current-alpine3.16
+        volumes:
+            - ./postgres:/var/www/html/postgresql
+        networks:
+            - nodejs
+        ports:
+            - '5000:5000'
+        expose:
+            - '5000'
+        environment:
+            PORT: 5000
+            BASE_URL: http://localhost
+            MONGO_URL: http://mongo-express:9000
+            REDIS_URL: http://redis:5050
+            DB_ENV: postgresql
+            DB_USERNAME: student
+            DB_PASSWD: secret
+            DB_NAME: forum
+            DB_HOST: pgsql
+        working_dir: /var/www/html/postgresql
+        entrypoint: ['npm', 'run', 'dev', '--host', '0.0.0.0']
+        depends_on:
+            - redisserver
+            - redis
+
+    redis:
+        image: node:current-alpine3.16
+        volumes:
+            - ./redis:/var/www/html/redis
+        ports:
+            - '5050:5050'
+        environment:
+            PORT: 5050
+            BASE_URL: http://localhost
+        working_dir: /var/www/html/redis
+        entrypoint: ['npm', 'run', 'dev', '--host', '0.0.0.0']
+        networks:
+            - nodejs
+        depends_on:
+            - redisserver
+
+    redisserver:
+        image: redis:latest
+        volumes:
+            - ./redisdata:/data
+        networks:
+            - nodejs
+
+    adminer:
+        build:
+            context: .
+            dockerfile: docker-conf/adminer/adminer.dockerfile
+        ports:
+            - '8080:8080'
+        expose:
+            - '8080'
+        depends_on:
+            - pgsql
+        networks:
+            - nodejs

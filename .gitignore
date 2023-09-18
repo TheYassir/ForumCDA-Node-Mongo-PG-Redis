@@ -1,0 +1,13 @@
+node_modules
+.env
+.idea
+*.log
+*.log.gz
+postgres/services/worker
+postgres/app/controllers/AppController.js
+redisdata
+mongoData
+pgsql
+plan.md
+TODO.md
+.DS_Store
